@@ -1,0 +1,48 @@
+{
+  "skill_name": "codex-review-skills",
+  "_comment": "Draft test prompts for the review skills, in the skill-creator layout. Each names the skill under test and the fixture it needs; fixtures are built by a script the way tests/guidelines-check.sh does, so no AGENTS.md or CLAUDE.md sits inside this repository. Assertions are added once the fixtures exist.",
+  "evals": [
+    {
+      "id": 1,
+      "skill": "code-review-correctness",
+      "prompt": "Review the diff of HEAD against HEAD~1. The commit message says: 'paginate the list endpoint'.",
+      "fixture": "One changed file adds pagination with an off-by-one on the last page (the final item is dropped). An unchanged file in the same directory has an obvious pre-existing bug. A second changed file has an unused import that the repository's linter config flags.",
+      "expected_output": "Exactly one finding: the off-by-one, at the changed line, with the caller or input that shows it. The pre-existing bug appears only as a one-line note at the end, not as a finding. The unused import is not reported. Coverage totals list two files reviewed."
+    },
+    {
+      "id": 2,
+      "skill": "code-review-correctness",
+      "prompt": "Review pull request #1. Its description reads: 'Add a retry to the upload client. No behavior change for callers.'",
+      "fixture": "The diff adds the retry and also changes the client's default timeout and removes an authorization header from one request path.",
+      "expected_output": "Findings for the timeout change and the removed header as intent mismatches, the header one at high severity, plus any correctness defect in the retry loop. The retry itself is not reported as a defect."
+    },
+    {
+      "id": 3,
+      "skill": "code-review-testing",
+      "prompt": "Review the working tree changes. I changed how duplicate records are detected during import.",
+      "fixture": "A repository with a pytest suite and a fixtures directory. The diff changes the key-match logic in an import module and adds a test that only asserts a mock was called once.",
+      "expected_output": "One finding that the changed key-match has no test with a representative source record, an existing target record, and a rerun; one finding that the added test asserts a mock call rather than the stored result. Names pytest and the existing fixtures directory as where the test belongs."
+    },
+    {
+      "id": 4,
+      "skill": "code-review-breaking-changes",
+      "prompt": "Review the diff of HEAD against HEAD~1.",
+      "fixture": "The diff renames a JSON response field in an HTTP handler, adds a required environment variable read at startup without touching the deploy workflow, and bumps a shared package version with no public API change.",
+      "expected_output": "High or medium finding for the renamed field naming who consumes it and that no versioned contract ships. Medium finding for the environment variable naming the workflow that must supply it. The version bump alone is not reported, or is low at most."
+    },
+    {
+      "id": 5,
+      "skill": "code-review-guidelines",
+      "prompt": "Covered by tests/guidelines-check.sh: override precedence, configured fallback, deeper-file precedence, and an imported rule's scope.",
+      "fixture": "Built by the script.",
+      "expected_output": "See the script's assertions."
+    },
+    {
+      "id": 6,
+      "skill": "code-review",
+      "prompt": "$code-review",
+      "fixture": "The repository from eval 1 with the eval 4 changes added, as a branch off main.",
+      "expected_output": "One numbered list sorted by severity with each finding in the shared format, no duplicate for a defect two passes both saw, coverage totals from the correctness pass, and no GitHub comment or label left."
+    }
+  ]
+}

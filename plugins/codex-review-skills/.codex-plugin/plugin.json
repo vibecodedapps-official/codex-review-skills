@@ -1,0 +1,33 @@
+{
+  "name": "codex-review-skills",
+  "version": "0.1.0",
+  "description": "A $code-review pass for Codex: an orchestrator plus correctness, guideline, testing, breaking-change, and change-size sub-reviews.",
+  "author": {
+    "name": "vibecodedapps.net",
+    "url": "https://vibecodedapps.net"
+  },
+  "repository": "https://github.com/vibecodedapps-official/codex-review-skills",
+  "keywords": [
+    "code-review",
+    "codex",
+    "skills"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Review Skills",
+    "shortDescription": "Deeper code review than the built-in /review.",
+    "longDescription": "Installs a code-review orchestrator together with sub-review skills for correctness and coverage, compliance with the repository's own instruction files, test authoring, breaking changes, and change size. Run it with $code-review.",
+    "developerName": "vibecodedapps.net",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read"
+    ],
+    "websiteURL": "https://github.com/vibecodedapps-official/codex-review-skills",
+    "defaultPrompt": [
+      "$code-review this pull request",
+      "$code-review my working tree changes",
+      "$code-review this branch against main"
+    ]
+  },
+  "license": "MIT"
+}
