@@ -40,9 +40,9 @@
     {
       "id": 6,
       "skill": "code-review",
-      "prompt": "$code-review",
+      "prompt": "$code-review this branch against main",
       "fixture": "The repository from eval 1 with the eval 4 changes added, as a branch off main.",
-      "expected_output": "One numbered list sorted by severity with each finding in the shared format, no duplicate for a defect two passes both saw, coverage totals from the correctness pass, and no GitHub comment or label left."
+      "expected_output": "One numbered list of confirmed findings sorted by severity with each finding in the shared format, no duplicate for a defect two passes both saw, unconfirmed findings under their own heading, refuted findings one line each with the disproving line, coverage totals from the correctness pass, no file or git state changed, and no comment or label left on the host."
     }
   ]
 }
