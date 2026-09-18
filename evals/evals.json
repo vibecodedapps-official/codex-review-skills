@@ -1,48 +1,69 @@
 {
   "skill_name": "codex-review-skills",
-  "_comment": "Draft test prompts for the review skills, in the skill-creator layout. Each names the skill under test and the fixture it needs; fixtures are built by a script the way tests/guidelines-check.sh does, so no AGENTS.md or CLAUDE.md sits inside this repository. Assertions are added once the fixtures exist.",
+  "_comment": "One test prompt per skill, in the skill-creator layout. Each names the skill under test, the fixture it needs, the output expected, the script that runs it, and the predicate ids that script asserts. The fixtures are written by tests/fixtures/*.sh and the repositories are built by the scripts, so no AGENTS.md or CLAUDE.md sits inside this repository. Every prompt asks for JSON instead of Markdown so the fields can be asserted; the skills are otherwise followed as written. tests/run-self-tests.sh replays every script's assertions with no model call.",
   "evals": [
     {
       "id": 1,
       "skill": "code-review-correctness",
       "prompt": "Review the diff of HEAD against HEAD~1. The commit message says: 'paginate the list endpoint'.",
-      "fixture": "One changed file adds pagination with an off-by-one on the last page (the final item is dropped). An unchanged file in the same directory has an obvious pre-existing bug. A second changed file has an unused import that the repository's linter config flags.",
-      "expected_output": "Exactly one finding: the off-by-one, at the changed line, with the caller or input that shows it. The pre-existing bug appears only as a one-line note at the end, not as a finding. The unused import is not reported. Coverage totals list two files reviewed."
+      "fixture": "One changed file adds pagination that drops the final partial page: floor division counts the pages, so the guard returns an empty list for a last page that is not full. An unchanged file in the same directory has an obvious pre-existing bug. A second changed file has an unused import that the repository's linter config flags.",
+      "expected_output": "Exactly one finding: the dropped final page, at the line that counts the pages or the guard below it, with the item count, page size and page number that show it. The unused import is not reported, and neither is the pre-existing bug, which may appear as a one-line note at the end but is not required to.",
+      "script": "tests/correctness-check.sh",
+      "assertions": "one-finding, anchor, demo-drops, kind-defect, no-legacy, no-util, coverage"
     },
     {
       "id": 2,
       "skill": "code-review-correctness",
-      "prompt": "Review pull request #1. Its description reads: 'Add a retry to the upload client. No behavior change for callers.'",
+      "prompt": "The change under review is the diff of the base commit HEAD~1 against the head commit HEAD in this repository. Its description reads: 'Add a retry to the upload client. No behavior change for callers.'",
       "fixture": "The diff adds the retry and also changes the client's default timeout and removes an authorization header from one request path.",
-      "expected_output": "Findings for the timeout change and the removed header as intent mismatches, the header one at high severity, plus any correctness defect in the retry loop. The retry itself is not reported as a defect."
+      "expected_output": "Findings for the timeout change and the removed header as intent mismatches, the header one at high severity, plus any correctness defect in the retry loop. The retry itself is not reported as a defect.",
+      "script": "tests/correctness-check.sh",
+      "assertions": "header-finding, timeout-finding, no-retry-defect"
     },
     {
       "id": 3,
       "skill": "code-review-testing",
       "prompt": "Review the working tree changes. I changed how duplicate records are detected during import.",
       "fixture": "A repository with a pytest suite and a fixtures directory. The diff changes the key-match logic in an import module and adds a test that only asserts a mock was called once.",
-      "expected_output": "One finding that the changed key-match has no test with a representative source record, an existing target record, and a rerun; one finding that the added test asserts a mock call rather than the stored result. Names pytest and the existing fixtures directory as where the test belongs."
+      "expected_output": "That the changed key-match has no test with a representative source record, an existing target record, and a rerun, and that the added test asserts a mock call rather than the stored result: one finding carrying both locations or two findings. Names pytest and the existing fixtures directory as where the test belongs.",
+      "script": "tests/testing-check.sh",
+      "assertions": "dedupe-finding, dedupe-obligations, dedupe-location, mock-finding, mock-evidence"
     },
     {
       "id": 4,
       "skill": "code-review-breaking-changes",
       "prompt": "Review the diff of HEAD against HEAD~1.",
       "fixture": "The diff renames a JSON response field in an HTTP handler, adds a required environment variable read at startup without touching the deploy workflow, and bumps a shared package version with no public API change.",
-      "expected_output": "High or medium finding for the renamed field naming who consumes it and that no versioned contract ships. Medium finding for the environment variable naming the workflow that must supply it. The version bump alone is not reported, or is low at most."
+      "expected_output": "High finding for the renamed field, naming the worker that consumes it, the KeyError it raises, and that no versioned contract or fallback ships. High finding for the environment variable, naming the workflow that must supply it and the failure to start. The version bump alone is not reported, or is low at most.",
+      "script": "tests/breaking-changes-check.sh",
+      "assertions": "rename-finding, env-finding, bump-low"
     },
     {
       "id": 5,
       "skill": "code-review-guidelines",
-      "prompt": "Covered by tests/guidelines-check.sh: override precedence, configured fallback, deeper-file precedence, and an imported rule's scope.",
-      "fixture": "Built by the script.",
-      "expected_output": "See the script's assertions."
+      "prompt": "The change under review is the diff of HEAD against HEAD~1 in this repository: four added Python files. Run twice, once with CLAUDE.md configured as a fallback instruction file and once with no fallback configured.",
+      "fixture": "A repository whose instruction files exercise the resolution rules: an AGENTS.override.md that withdraws a sibling rule, a tools/CLAUDE.md that counts only when configured as a fallback, a deeper AGENTS.md overriding the root, and a root file referencing docs/review.md for changes under src/.",
+      "expected_output": "With the fallback configured, a finding on the file that breaks the referenced rule and one on the file that breaks the fallback's rule; with no fallback configured, only the first. No finding on the file whose ban was withdrawn or the one the deeper file allows. Every finding quotes its rule and cites a line that exists.",
+      "script": "tests/guidelines-check.sh",
+      "assertions": "cites-rule, no-other-rule, line-exists, rule-line-holds-id, no-finding-lib, no-finding-api, no-finding-tools, no-extra-file"
     },
     {
       "id": 6,
       "skill": "code-review",
-      "prompt": "$code-review this branch against main",
-      "fixture": "The repository from eval 1 with the eval 4 changes added, as a branch off main.",
-      "expected_output": "One numbered list of confirmed findings sorted by severity with each finding in the shared format, no duplicate for a defect two passes both saw, unconfirmed findings under their own heading, refuted findings one line each with the disproving line, coverage totals from the correctness pass, no file or git state changed, and no comment or label left on the host."
+      "prompt": "You are running the code review orchestrator skill at <plugin>/skills/code-review/SKILL.md, whose sibling code-review-* skills are in the same directory. Review the branch feature against main. The review is read-only, as the skill says: it changes no file, branch, index, or stash.",
+      "fixture": "One repository: main holds the eval 1 and eval 4 bases on disjoint paths, and the branch feature off main holds the eval 1 change and then the eval 4 change, one commit each, with HEAD left on feature.",
+      "expected_output": "Confirmed, unconfirmed and refuted findings in their own sections, each with a path:line, a severity and the fact that shows it; the dropped page, the renamed field and the required environment variable each confirmed once, whatever category or line they are filed under; nothing on the unchanged file that holds the pre-existing bug; every refuted finding pointing at a line that exists; coverage naming every changed file with none skipped; the repository's refs, HEAD, tree, stashes and status as the run found them; and, from the run's session rollout, at least six spawns, each with a fresh context at xhigh reasoning, a child thread named for each of the five sub-reviews and one named verification, and every one of them running at xhigh. A spawn Codex refuses, for the cap on how many agents run at once or for the name, is spawned again, so the rollout can hold more spawn calls than child threads. A rollout that cannot be found leaves this last part unverified: the script prints 'spawn parameters: unverified' and exits 3 rather than passing.",
+      "script": "tests/code-review-check.sh",
+      "assertions": "confirmed-pagination, confirmed-rename, confirmed-environ, dedup, no-legacy, coverage, refuted-locations, git-oracle, spawn-args, child-effort, children-complete"
+    },
+    {
+      "id": 7,
+      "skill": "code-review",
+      "prompt": "Act as the verification subagent described under Verification in the code review skill. Verify only the supplied candidates under the Verification verdict rules; do not orchestrate review passes or add new candidates. The comparison is the diff of HEAD~1 against HEAD, the stated intent is the commit message 'paginate the list endpoint', and the review is read-only. Three candidates follow, with ids c1, c2 and c3.",
+      "fixture": "The eval 1 repository at its change commit. c1 is the real pagination defect. c2 claims that list_items never validates size, which the guard and the raise above the change deny. c3 rests on a caller that passes a negative page, and the repository holds no caller at all.",
+      "expected_output": "One verdict per id and no others: c1 confirmed, c2 refuted with the disproving line at the size guard or the raise, c3 unconfirmed with what would settle it.",
+      "script": "tests/verifier-check.sh",
+      "assertions": "partition, c1-confirmed, c2-refuted, c2-location, c3-unconfirmed, c3-settles"
     }
   ]
 }
