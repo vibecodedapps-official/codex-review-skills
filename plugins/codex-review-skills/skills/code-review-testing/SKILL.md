@@ -18,7 +18,10 @@ Prefer the narrowest test that runs the real code path:
 - A database change (migration, schema version bump, policy, trigger, database
   function) needs a test against a running database, not a mocked client: the rows it
   makes visible or hides, the constraint it adds, and that data written by the previous
-  schema version still loads.
+  schema version still loads. When no harness runs a database function directly, an
+  existing integration scenario counts if it runs the changed function against a real
+  database and asserts the stored result; name that scenario. A run promised after
+  deploy is not coverage.
 - A data transformation or field-mapping change (import, export, migration, sync) needs
   a test with a representative source record and the exact expected output, including
   nulls, empty strings, legacy sentinel values, and a record that already exists in the

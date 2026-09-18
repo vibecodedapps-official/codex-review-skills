@@ -1,6 +1,6 @@
 {
   "name": "codex-review-skills",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A $code-review pass for Codex: an orchestrator plus correctness, guideline, testing, breaking-change, and change-size sub-reviews.",
   "author": {
     "name": "vibecodedapps.net",
