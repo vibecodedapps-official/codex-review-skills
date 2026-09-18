@@ -26,9 +26,13 @@ this thread's reading of the diff. Use xhigh reasoning, or the highest level the
 accepts, unless the user named a level (low, medium, high, xhigh) with the request. Give
 each subagent the full path to its `SKILL.md`, the comparison, the intent, the user's
 request and any constraint it states, the fallback names, and the finding format below.
-Tell each that the review is read-only: it changes no file, branch, index, or stash. Do
-not run any pass yourself in the main thread; independent passes are the point, since a
-single reader anchors on the first problem it sees.
+Name each subagent after its skill, with underscores for the hyphens, since the spawn
+tool allows only lowercase letters, digits, and underscores. Tell each that the review
+is read-only: it changes no file, branch, index, or stash. Codex caps how many agents
+run at once; when a spawn is refused for that reason, wait for a running pass to finish
+and spawn it again. Do not run any pass, or the verification below, yourself in the
+main thread; independent passes are the point, since a single reader anchors on the
+first problem it sees. A pass that could not be run is reported as not run.
 
 ## Finding format
 
@@ -49,11 +53,11 @@ Ask every subagent to report each finding as:
 
 Merge the subagents' findings: two are one finding when they name the same defect with
 the same required fix, even at different lines; keep both locations and the more
-specific wording. Then spawn one more subagent, fresh context and the same reasoning
-level, with the merged list, the comparison, the intent, and the read-only rule. It
-tries to refute each finding against the code and returns a verdict: confirmed when it
-read the line and the defect holds; refuted when it can point to the line that disproves
-it; unconfirmed when it could do neither.
+specific wording. Then spawn one more subagent named verification, fresh context and the
+same reasoning level, with the merged list, the comparison, the intent, and the
+read-only rule. It tries to refute each finding against the code and returns a verdict:
+confirmed when it read the line and the defect holds; refuted when it can point to the
+line that disproves it; unconfirmed when it could do neither.
 
 ## Report
 
