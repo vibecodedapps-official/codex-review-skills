@@ -9,12 +9,19 @@ Search for breaking changes on every surface another party depends on:
   fields, status codes, error shapes, pagination, auth requirements, CORS, and any
   health payload a deploy asserts on. A tightened validator, a new required field, or a
   change to what create-or-update treats as the same record breaks callers that were
-  passing yesterday and can duplicate or overwrite rows.
+  passing yesterday and can duplicate or overwrite rows. An API spec (OpenAPI, GraphQL,
+  protobuf) and the handler that serves it that disagree after the change on a field,
+  whether it is required, or a status code.
 - Database schema and policies. A migration that drops or renames a column, tightens a
   constraint, changes a row-level security policy, or bumps a schema version breaks rows
   already stored, services on the previous build, ORM mappings, and generated types.
   Check that it is additive or ships a backfill, has a rollback, and that mappings and
-  generated types were regenerated.
+  generated types were regenerated. A versioned, run-once migration file already
+  applied by a journaling tool (Flyway `V__`, DbUp, Liquibase changesets, Prisma,
+  Supabase) and edited in place: the edit never runs where the file was applied, or the
+  checksum check fails the deploy. Repeatable migrations are meant to rerun. A function,
+  view, or type dropped and re-created loses its grants; report the grant a caller
+  needs that the change does not restore.
 - Data transformations and field mappings (import, export, migration, sync). A changed
   mapping, default, or key match rewrites records already processed on the next run; a
   changed type or null rule breaks downstream consumers of the target table. Say what

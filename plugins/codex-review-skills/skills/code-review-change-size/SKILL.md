@@ -5,10 +5,15 @@ description: "Judge whether a change is small enough to review well and, if not,
 
 Reviewer attention falls off past a few hundred changed lines, and a defect in line 700
 of a single review is far more likely to slip through than the same defect in a
-200-line stage that got its own pass. So count the changed lines, leaving out generated
-files, lockfiles, and vendored dependencies. A change that is not mechanical should stay
-under 800 changed lines, and under 500 when it alters complex logic. Renames,
-formatting, and generated output do not count against it.
+200-line stage that got its own pass. So count the changed lines on the same base and
+head the review uses, leaving out generated files, lockfiles, vendored dependencies,
+and renames. A file is generated when `.gitattributes` marks it `linguist-generated`,
+it carries a generated-file header, or it has a suffix the repository's build emits
+(`.Designer.cs`, `.feature.cs`, `.g.cs`, `.pb.go`). A file whose diff is empty under
+`git diff -w` on that range is a formatting change and does not count, unless its
+language is whitespace-sensitive (Python, YAML, Makefile). A change that is not
+mechanical should stay under 800 changed lines, and under 500 when it alters complex
+logic.
 
 If the change is larger, say whether it splits into stages that can each be reviewed and
 landed on their own, and name the smallest coherent stage to land first. Base that on

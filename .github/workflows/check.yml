@@ -1,0 +1,32 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Check script syntax
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for f in tests/*.sh tests/fixtures/*.sh; do
+            bash -n "$f"
+          done
+      - name: Validate JSON files
+        shell: bash
+        run: |
+          for f in plugins/codex-review-skills/.codex-plugin/plugin.json .agents/plugins/marketplace.json evals/evals.json; do
+            python3 -m json.tool "$f" > /dev/null
+          done
+      - name: Self-test the checks
+        shell: bash
+        run: tests/run-self-tests.sh

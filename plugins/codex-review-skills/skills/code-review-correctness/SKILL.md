@@ -19,8 +19,13 @@ first serious finding.
 
 - Read the pull request title and description, or the commit messages, first. Judge
   the change against the stated intent, and report where the diff does not do what it
-  says.
-- Comment on added and modified code only. Deleted and unchanged code is context.
+  says: a file, function, or test the description says this change adds or modifies
+  that the diff does not touch (check the target tree before calling it missing), or a
+  deferral the description states that the diff does anyway.
+- Comment on added and modified code only. Deleted and unchanged code is context,
+  except where the deletion itself introduces the defect (a removed check, a dropped
+  branch) or the change makes unchanged code fail; report that at the nearest changed
+  line.
 - When the context is unclear, read the surrounding code or search for the callers
   before judging. Do not flag on assumption.
 - Look across the changed files for what one change requires of another: a renamed
@@ -34,8 +39,8 @@ first serious finding.
 
 ## Do not report
 
-- A defect in unchanged lines. Note it in one line at the end, unmarked as a finding,
-  if it is serious.
+- A defect in unchanged lines that the change did not cause. Note it in one line at
+  the end, unmarked as a finding, if it is serious.
 - Code that looks wrong but is correct once the surrounding code is read.
 - A nit a senior engineer would not raise in review.
 - Anything a linter, formatter, or type checker in the repo will catch.
@@ -92,3 +97,17 @@ but an `env:` block. No `permissions:` or `write-all`. A third-party action pinn
 tag rather than a SHA. A `${{ github.event.* }}` value inside `run:`. No
 `timeout-minutes`. No explicit `shell:` on a self-hosted runner. `needs:` naming a job
 that does not exist. A misspelled action input, which is silently ignored.
+
+### SQL and database functions
+
+Each of these is a finding only with an input that reaches it. A join that fans out
+rows because its key is not unique on the joined side, or an id shared across record
+types joined without the type qualifier, where the query does not expect duplicates. A
+JSON function such as `jsonb_array_elements` applied to a value that can be JSON `null`
+or absent, with no guard. A variable declared outside a loop in a batch function and
+not reset each iteration, so one row's value or error carries into the next row's
+result. A target column, variable, or composite type narrower than the value it
+receives (silent truncation or an error, by engine). A trigger that reads the row it
+fires for before it exists (`BEFORE INSERT`). `NULL` compared with `=` or `<>`, or
+`NOT IN` over a subquery that can return `NULL`. An exception handler in a batch that
+records the row as succeeded.
