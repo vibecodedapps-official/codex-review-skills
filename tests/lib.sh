@@ -8,11 +8,12 @@
 #     can be copied into a script as its control.
 #
 #   codex_json_run <cwd> <add_dir> <schema> <out_json> <log> <prompt> [codex args...]
-#     One `codex exec` call that writes its last message to <out_json> under <schema>.
-#     Extra codex arguments (--ephemeral, -c key=value) are forwarded as an array, so a
-#     value with spaces stays one argument. stdin is closed because codex exec waits on
-#     it when run from a pipe. stdout and stderr go to <log>; on failure the last 20 log
-#     lines are printed and codex's exit code is returned.
+#     One `codex exec` call that writes its last message to <out_json> under <schema>. An
+#     empty <schema> omits `--output-schema`, so the last message is whatever the skill
+#     asks for, Markdown included. Extra codex arguments (--ephemeral, -c key=value) are
+#     forwarded as an array, so a value with spaces stays one argument. stdin is closed
+#     because codex exec waits on it when run from a pipe. stdout and stderr go to <log>;
+#     on failure the last 20 log lines are printed and codex's exit code is returned.
 #
 #   self_test <assert_fn> <control.json> <mutations_dir> [assert args...]
 #     Replays the assertions with no model call: <control.json> (an output observed from
@@ -36,8 +37,9 @@ make_tmp() {
 codex_json_run() {
   local cwd=$1 add_dir=$2 schema=$3 out_json=$4 log=$5 prompt=$6 rc=0
   shift 6
+  if [ -n "$schema" ]; then set -- --output-schema "$schema" "$@"; fi
   codex exec --cd "$cwd" --add-dir "$add_dir" -s read-only \
-    --output-schema "$schema" -o "$out_json" --json "$@" "$prompt" \
+    -o "$out_json" --json "$@" "$prompt" \
     </dev/null >"$log" 2>&1 || rc=$?
   if [ "$rc" -ne 0 ]; then
     echo "codex exec failed (exit $rc), last 20 lines of $log:" >&2

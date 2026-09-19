@@ -27,6 +27,11 @@ jobs:
           for f in plugins/codex-review-skills/.codex-plugin/plugin.json .agents/plugins/marketplace.json evals/evals.json; do
             python3 -m json.tool "$f" > /dev/null
           done
+      - name: Check the changelog version
+        shell: bash
+        run: |
+          tests/version.sh --self-test
+          tests/version.sh
       - name: Self-test the checks
         shell: bash
         run: tests/run-self-tests.sh
