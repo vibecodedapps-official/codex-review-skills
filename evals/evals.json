@@ -1,6 +1,6 @@
 {
   "skill_name": "codex-review-skills",
-  "_comment": "One test prompt per skill, in the skill-creator layout. Each names the skill under test, the fixture it needs, the output expected, the script that runs it, and the predicate ids that script asserts. The fixtures are written by tests/fixtures/*.sh and the repositories are built by the scripts, so no AGENTS.md or CLAUDE.md sits inside this repository. Every prompt asks for JSON instead of Markdown so the fields can be asserted; the skills are otherwise followed as written. tests/run-self-tests.sh replays every script's assertions with no model call.",
+  "_comment": "One test prompt per skill, in the skill-creator layout. Each names the skill under test, the fixture it needs, the output expected, the script that runs it, and the predicate ids that script asserts. The fixtures are written by tests/fixtures/*.sh and the repositories are built by the scripts, so no AGENTS.md or CLAUDE.md sits inside this repository. Every prompt but eval 8's asks for JSON instead of Markdown so the fields can be asserted; eval 8 asks for the Markdown report itself, since the Report section is what it checks; the skills are otherwise followed as written. tests/run-self-tests.sh replays every script's assertions with no model call.",
   "evals": [
     {
       "id": 1,
@@ -64,6 +64,15 @@
       "expected_output": "One verdict per id and no others: c1 confirmed, c2 refuted with the disproving line at the size guard or the raise, c3 unconfirmed with what would settle it.",
       "script": "tests/verifier-check.sh",
       "assertions": "partition, c1-confirmed, c2-refuted, c2-location, c3-unconfirmed, c3-settles"
+    },
+    {
+      "id": 8,
+      "skill": "code-review",
+      "prompt": "Act as the orchestrator of the code review skill at its Report step. Every pass and the verification subagent have already returned; their merged output follows. Write the report the Report section describes, as raw Markdown, and nothing else. Do not run any pass, verify, or add, drop, or reword a finding. The comparison is the diff of HEAD~1 against HEAD, the stated intent is the commit message 'paginate the list endpoint'. Supplied: the coverage totals, one pass that was not run with its reason, and five merged findings with verdicts, ids f1 to f5, in the order f2, f5, f4, f1, f3.",
+      "fixture": "The eval 1 repository at its change commit, with a line appended to ruff.toml in the same commit, so three files changed and the third is the one the coverage totals skip. f1 is confirmed high on the pages and the guard line, f2 confirmed low on the unused import, f3 confirmed medium on the guard line again, f4 unconfirmed low on the guard line with what would settle it, f5 refuted high with the size guard as its disproving line.",
+      "expected_output": "One Markdown report: f1, f3 and f2 numbered in that severity order, each with its severity and every supplied location; f4 after them under a heading of its own, unnumbered, with its location and what would settle it; f5 last, one line, with the disproving line; the change-size pass stated as not run with its reason, before the coverage totals; the totals themselves, 3 changed, 2 reviewed, 1 skipped, naming ruff.toml and why it was skipped; and no pass, model or tooling named anywhere else.",
+      "script": "tests/report-check.sh",
+      "assertions": "confirmed, confirmed-locations, unconfirmed, refuted, not-run, coverage, no-tooling"
     }
   ]
 }

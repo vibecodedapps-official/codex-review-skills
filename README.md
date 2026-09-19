@@ -10,6 +10,19 @@ the kind of surface a change touches (a request contract, a schema, a test suite
 configuration file, a pipeline) rather than by language or framework, so one install
 works across stacks and the reviewer applies only the parts the diff touches.
 
+## How it works
+
+1. Fix the comparison once: a pull request, a branch, a commit, or the working tree, as
+   two commits or the tree, and read the change's stated intent.
+2. Run one fresh-context subagent per `code-review-*` skill, each at xhigh reasoning
+   unless the request named a level.
+3. Merge the findings that name the same defect and the same fix.
+4. One more fresh-context subagent tries to refute each merged finding: confirmed,
+   refuted, or unconfirmed.
+5. Report the confirmed findings numbered by severity, the unconfirmed ones with what
+   would settle each, the refuted ones with the disproving line, any pass that was not
+   run, and the coverage totals.
+
 ## Install
 
 ```sh
@@ -44,17 +57,20 @@ Codex lists plugin skills under the plugin name, as `codex-review-skills:code-re
 - `code-review`: the orchestrator. Works out the target (pull request, branch, commit,
   or working tree) as one fixed comparison, reads the stated intent, runs one
   fresh-context subagent per other `code-review-*` skill at xhigh reasoning (or the
-  level named with the request), then has one more subagent try to refute every
-  finding. A spawn Codex refuses for its concurrency cap is retried, never replaced by
-  work in the main thread. The report numbers the confirmed findings with a file path
-  and line, lists unconfirmed and refuted ones separately, and includes the coverage
-  totals. The review changes no file or git state and posts nothing to the pull request
-  host unless asked.
+  level named with the request, as in `$code-review high`), then has one more subagent
+  try to refute every finding. A spawn Codex refuses for its concurrency cap is retried,
+  never replaced by work in the main thread. The report numbers the confirmed findings
+  with a file path and line, lists unconfirmed and refuted ones separately, states any
+  pass that was not run with the reason, and includes the coverage totals. The review
+  changes no file or git state and posts nothing to the pull request host unless asked.
 - `code-review-correctness`: the general pass. A checklist of every changed file ending
   reviewed or skipped with a reason, added-code-only focus, intent read from the pull
   request first, each finding confirmed in the code before it is reported, correctness
   and security checks, severity definitions, a do-not-report list, and language and
-  file notes applied only where the diff touches them.
+  file notes applied only where the diff touches them. Running
+  `$code-review-correctness` on its own is the fast path for one commit or a small
+  change; its findings are not independently verified, since no second reader tries to
+  refute them.
 - `code-review-guidelines`: audits the diff against the repository's own instruction
   files (`AGENTS.md`, `AGENTS.override.md`, and configured fallbacks such as
   `CLAUDE.md`), resolved the way Codex resolves them and scoped by path, and reports a
@@ -78,7 +94,9 @@ Codex lists plugin skills under the plugin name, as `codex-review-skills:code-re
   land first.
 
 After changing a skill, bump `version` in
-`plugins/codex-review-skills/.codex-plugin/plugin.json` so installed clients pick it up.
+`plugins/codex-review-skills/.codex-plugin/plugin.json` so installed clients pick it up,
+and add the entry to `CHANGELOG.md`; `tests/version.sh` fails in CI when the two
+disagree.
 
 ## Checks
 
@@ -94,6 +112,7 @@ tests/breaking-changes-check.sh
 tests/guidelines-check.sh
 tests/code-review-check.sh
 tests/verifier-check.sh
+tests/report-check.sh
 ```
 
 `tests/correctness-check.sh` builds one repository per scenario and makes two model
@@ -144,26 +163,38 @@ defect is confirmed, that the claim the guard above it denies is refuted at that
 and that the claim resting on a caller the repository does not have is left
 unconfirmed with what would settle it.
 
-Each script takes a different `SKILL.md` path to check another version. `--self-test`
-runs the assertions alone, with no model call, against the control (the output a live
-run produced, stored in the script with the date, the CLI version, and the model and
-effort that run used) and against one mutation per fact a predicate reads, each the
-control with that one fact moved outside what the predicate accepts; every mutation
-must fail, and fail on its own predicate, so a fact that stopped being read is caught.
-`tests/run-self-tests.sh` runs every check that way, and `CHECK_KEEP_TMP=1` keeps the
-throwaway repository and the model's output, which is how a control is recorded.
+`tests/report-check.sh` builds the pagination repository with a third changed file and
+makes one model call, acting at the Report step over five findings that already carry
+their verdicts: that the three confirmed ones are numbered in severity order, that each
+cites every location it was given and invents none, that the unconfirmed one sits
+unnumbered under its own heading with what would settle it, that the refuted one comes
+last on one line with the disproving line, that the pass which could not run is stated
+with its reason before the coverage totals, that the totals match the files the fixture
+changed, and that no pass, model, or tool is named outside that one statement. The model
+returns raw Markdown, and the self-test reads the control and eight hand-written layouts
+the Report section allows.
+
+Each `tests/*-check.sh` script takes a different `SKILL.md` path to check another
+version. `--self-test` runs the assertions alone, with no model call, against the
+control (the output a live run produced, stored in the script with the date, the CLI
+version, and the model and effort that run used) and against one mutation per fact a
+predicate reads, each the control with that one fact moved outside what the predicate
+accepts; every mutation must fail, and fail on its own predicate, so a fact that
+stopped being read is caught. `tests/run-self-tests.sh` runs every `tests/*-check.sh`
+that way, and `CHECK_KEEP_TMP=1` keeps the throwaway repository and the model's output,
+which is how a control is recorded.
 
 `.github/workflows/check.yml` runs `bash -n` over the scripts and the fixture writers,
-a parse of the JSON manifests, and `tests/run-self-tests.sh` on every push to `main`
-and every pull request. It does not call a model, so it checks the assertions, not the
-skills.
+a parse of the JSON manifests, `tests/version.sh` after its own `--self-test`, and
+`tests/run-self-tests.sh` on every push to `main` and every pull request. It does not
+call a model, so it checks the assertions, not the skills.
 
-Two things the checks leave uncovered. Every prompt asks for the report as JSON so its
-fields can be asserted, so the Markdown the skills actually emit is never exercised.
-And the spawn evidence in the orchestrator check is read from the Codex session
-rollout under `~/.codex/sessions`, which is why that check alone runs without
-`--ephemeral`; when no rollout for the run can be found it prints `spawn parameters:
-unverified` and exits 3 rather than passing.
+One thing the checks leave uncovered. The spawn evidence in the orchestrator check is
+read from the Codex session rollout under `~/.codex/sessions`, which is why that check
+alone runs without `--ephemeral`; when no rollout for the run can be found it prints
+`spawn parameters: unverified` and exits 3 rather than passing. `tests/report-check.sh`
+exercises the Markdown Report section; the other checks assert on the JSON their prompts
+ask for.
 
 ## License
 

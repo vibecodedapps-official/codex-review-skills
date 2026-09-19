@@ -63,8 +63,10 @@ line that disproves it; unconfirmed when it could do neither.
 
 Number the confirmed findings and sort them by severity. List unconfirmed findings after
 them under their own heading, unnumbered, each with what would settle it. List refuted
-findings last, one line each with the disproving `path:line`. Include the coverage
-totals from the correctness pass: files changed, reviewed, skipped with reasons. Use raw
+findings last, one line each with the disproving `path:line`. State any pass that was not
+run, with the reason, before the coverage totals; that is the one place a pass is named.
+Include the coverage totals from the correctness pass: files changed, reviewed, skipped
+with reasons. Use raw
 Markdown. Name the project's own tools where a finding needs them; do not name the
 review passes, the model, or the review tooling.
 
